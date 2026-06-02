@@ -9,12 +9,9 @@ homepage: https://github.com/canonical/gsettings.dart
 environment:
   sdk: '>=3.12.0 <4.0.0'
 
-platforms:
-  linux:
-
 dependencies:
-  dbus: 
-    git: https://github.com/kumsumit/dbus.dart.git
+  dbus:
+    path: /Users/amitsharan/StudioProjects/dbus.dart
   xdg_directories: ^1.1.0
 
 dev_dependencies:
