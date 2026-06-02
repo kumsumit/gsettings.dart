@@ -97,10 +97,18 @@ class GSettings {
     _keysChangedController.onListen = () {
       _load().then((table) {
         var path = _getPath(table);
+        // Only keys directly in this schema's path. Keys whose remainder
+        // contains a '/' belong to a child schema (e.g. org.gnome.shell.ubuntu
+        // under org.gnome.shell) and, matching GIO, must not be reported to the
+        // parent schema.
+        bool isDirectKey(String key) =>
+            key.startsWith(path) && !key.substring(path.length).contains('/');
         _keysChangedController.addStream(_backend.valuesChanged
-            .where((keys) => keys.any((key) => key.startsWith(path)))
-            .map((keys) =>
-                keys.map((key) => key.substring(path.length)).toList()));
+            .where((keys) => keys.any(isDirectKey))
+            .map((keys) => keys
+                .where(isDirectKey)
+                .map((key) => key.substring(path.length))
+                .toList()));
       });
     };
   }

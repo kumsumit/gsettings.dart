@@ -1085,6 +1085,25 @@ void main() {
       expect(dconfServer.values['/com/example/test2/string-value'],
           equals(DBusString('Hello World')));
     });
+
+    test('dconf client - file-db source', () async {
+      // Regression test for https://github.com/canonical/gsettings.dart/issues/61
+      // A 'file-db' profile source (used e.g. on NixOS) must be read from the
+      // GVariant database file at the given absolute path, not rejected as an
+      // unknown source.
+      var dbPath = '${Directory.current.path}/test/dconf/test';
+
+      var tempDir = Directory.systemTemp.createTempSync('gsettings_test_');
+      addTearDown(() async => await tempDir.delete(recursive: true));
+      var profileFile = File('${tempDir.path}/profile');
+      await profileFile.writeAsString('file-db:$dbPath\n');
+
+      var client = DConfClient(profile: profileFile.path);
+      addTearDown(() async => await client.close());
+
+      expect(await client.read('/com/example/test1/string-value'),
+          equals(DBusString('Hello World')));
+    });
   });
 
   group('GSettings', () {
@@ -1534,6 +1553,41 @@ void main() {
       // Do round trip to server to ensure change is subscribed to.
       await bus.ping();
 
+      await dconfServer.setValue(
+          '/com/example/test2/int32-value', DBusInt32(-32));
+    });
+
+    test('key changed - ignores child schema keys', () async {
+      // Regression test for https://github.com/canonical/gsettings.dart/issues/48
+      // A change to a key in a child schema (a deeper path) must not be
+      // reported to the parent schema, matching GIO behaviour.
+      var server = DBusServer();
+      addTearDown(() async => await server.close());
+      var clientAddress = await server
+          .listenAddress(DBusAddress.unix(dir: Directory.systemTemp));
+
+      var dconfServer = MockDConfServer(clientAddress);
+      addTearDown(() async => await dconfServer.close());
+      await dconfServer.start();
+
+      var bus = DBusClient(clientAddress);
+      var settings = GSettings('com.example.Test2', sessionBus: bus);
+      addTearDown(() async => await settings.close());
+
+      expect(
+          settings.keysChanged,
+          emitsInOrder([
+            // The child key change is skipped; only the direct key is emitted.
+            ['int32-value']
+          ]));
+
+      // Do round trip to server to ensure change is subscribed to.
+      await bus.ping();
+
+      // Key in a (hypothetical) child schema under a deeper path - must be
+      // ignored rather than emitted as 'child/string-value'.
+      await dconfServer.setValue(
+          '/com/example/test2/child/string-value', DBusString('Hello'));
       await dconfServer.setValue(
           '/com/example/test2/int32-value', DBusInt32(-32));
     });

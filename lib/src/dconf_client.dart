@@ -207,8 +207,10 @@ class DConfClient {
         case 'system-db':
           source = DConfEngineSourceSystem(value, _systemBus);
           break;
+        case 'file-db':
+          source = DConfEngineSourceFile(value);
+          break;
         case 'service-db': // Not implemented
-        case 'file-db': // Not implemented
         default:
           throw "Unknown DConf source: '$line'";
       }
@@ -267,6 +269,22 @@ class DConfEngineSourceSystem extends DConfEngineSource {
 
   @override
   String toString() => "$runtimeType('$name')";
+}
+
+class DConfEngineSourceFile extends DConfEngineSource {
+  /// Absolute path to the GVariant database file.
+  final String path;
+
+  DConfEngineSourceFile(this.path);
+
+  @override
+  GVariantDatabase get database => GVariantDatabase(path);
+
+  // A file-db is a read-only source, so [writer] is left unimplemented
+  // (inherited from [DConfEngineSource]).
+
+  @override
+  String toString() => "$runtimeType('$path')";
 }
 
 // Build a filename from parts.
