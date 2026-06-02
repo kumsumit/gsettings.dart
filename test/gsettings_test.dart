@@ -69,9 +69,8 @@ class MockDConfServer extends DBusClient {
 
   late final MockDConfWriter _writer;
 
-  MockDConfServer(DBusAddress clientAddress,
-      {Map<String, DBusValue> values = const {}})
-      : super(clientAddress) {
+  MockDConfServer(super.clientAddress,
+      {Map<String, DBusValue> values = const {}}) {
     this.values.addAll(values);
     _writer = MockDConfWriter(this, 'test');
   }
